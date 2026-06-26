@@ -28,3 +28,6 @@ dist/
 # Editor / OS
 .DS_Store
 Thumbs.db
+
+# transient pip bootstrap
+get-pip.py
