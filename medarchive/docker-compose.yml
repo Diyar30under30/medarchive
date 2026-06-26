@@ -1,0 +1,52 @@
+# MedArchive — one-command stack: `docker compose up` brings up DB + API + frontend.
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: medarchive
+      POSTGRES_PASSWORD: medarchive
+      POSTGRES_DB: medarchive
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U medarchive"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build: ./backend
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+psycopg://medarchive:medarchive@db:5432/medarchive
+      ENABLE_EMBEDDINGS: "true"
+      ENABLE_OCR: "true"
+      AUTO_LOAD_REFERENCE: "true"
+      AUTO_SEED_FIXTURES: "true"
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/app/../data          # reference, incoming, raw_store preserved on host
+      - modelcache:/models
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request,sys; urllib.request.urlopen('http://localhost:8000/health'); \" || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  frontend:
+    build: ./frontend
+    depends_on:
+      - api
+    environment:
+      VITE_API_BASE: http://localhost:8000
+    ports:
+      - "5173:5173"
+
+volumes:
+  pgdata:
+  modelcache:

@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.venv-probe/
+venv/
+*.egg-info/
+.pytest_cache/
+
+# Local DB / models / data artifacts (preserve structure, not contents)
+*.db
+*.sqlite3
+medarchive/data/raw_store/*
+!medarchive/data/raw_store/.gitkeep
+medarchive/data/incoming/*.zip
+models/
+.cache/
+
+# Node / frontend
+node_modules/
+dist/
+.vite/
+
+# Env
+.env
+*.local
+
+# Editor / OS
+.DS_Store
+Thumbs.db

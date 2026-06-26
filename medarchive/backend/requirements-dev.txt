@@ -1,0 +1,32 @@
+# Host dev profile (no Docker). Installed into backend/.venv via `uv` on a
+# provisioned Python 3.12 so every dependency has prebuilt wheels.
+#
+# Excludes the Postgres driver (SQLite dev) and the heavy semantic stack
+# (sentence-transformers/torch). The matcher runs lexical-only on the host and
+# gains the semantic layer automatically inside Docker (full requirements.txt).
+# OCR (tesseract) is feature-flagged off on the host.
+
+fastapi
+uvicorn[standard]
+pydantic
+pydantic-settings
+python-multipart
+
+SQLAlchemy
+alembic
+
+# Extraction (all have 3.12 wheels)
+pdfplumber
+PyMuPDF
+openpyxl
+pandas
+python-docx
+Pillow
+
+# Matching — lexical (pure-python, always available)
+rapidfuzz
+numpy
+
+# Tests
+pytest
+httpx

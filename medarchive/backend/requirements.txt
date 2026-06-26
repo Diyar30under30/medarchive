@@ -1,0 +1,30 @@
+# --- Web / API ---
+fastapi==0.115.6
+uvicorn[standard]==0.34.0
+pydantic==2.10.4
+pydantic-settings==2.7.1
+python-multipart==0.0.20
+
+# --- DB / ORM / migrations ---
+SQLAlchemy==2.0.36
+alembic==1.14.0
+psycopg[binary]==3.2.3        # PostgreSQL driver (Docker profile)
+pgvector==0.3.6               # vector column type + ops
+
+# --- Extraction ---
+pdfplumber==0.11.4            # PDF text + tables
+PyMuPDF==1.25.1               # fitz: rasterize for OCR, fallback text
+pytesseract==0.3.13          # OCR (needs system tesseract-ocr + lang data)
+Pillow==11.0.0               # image handling for OCR
+openpyxl==3.1.5              # XLSX
+pandas==2.2.3               # tabular handling / header detection
+python-docx==1.1.2          # DOCX (+ manual XML pass for tracked changes)
+
+# --- Matching ---
+rapidfuzz==3.11.0            # lexical fuzzy scoring (pure-python wheels, installs anywhere)
+sentence-transformers==3.3.1 # multilingual embeddings (Docker profile / optional on host)
+numpy==2.2.1
+
+# --- Tests ---
+pytest==8.3.4
+httpx==0.28.1               # FastAPI TestClient transport
