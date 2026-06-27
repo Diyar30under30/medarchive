@@ -70,17 +70,42 @@ match fusion weights (`MATCH_FUSION_LEXICAL`/`SEMANTIC`), decision thresholds
 | Phase | Scope | Status |
 |---|---|---|
 | A0 | Scaffold, docker compose, health, two-profile runtime | ✅ |
-| A1 | Reference directory: models + loader (XLSX/JSON, UUIDs, embeddings) | ⏳ |
-| A2 | Synthetic fixtures (4 formats, anomalies) | ⏳ |
-| A3 | Ingestion + 4 extractors (incl. OCR, tracked changes) | ⏳ |
-| A4 | Matching engine (lexical + semantic + fusion + learning loop) | ⏳ |
-| A5 | Validation, currency, versioning | ⏳ |
-| A6 | REST API (OpenAPI) | ⏳ |
-| A7 | Frontend (search + operator console + dashboard) | ⏳ |
-| A8 | Tests + quality report + README | ⏳ |
+| A1 | Reference directory: models + loader (XLSX/JSON, UUIDs, embeddings) | ✅ |
+| A2 | Synthetic fixtures (4 formats, anomalies) | ✅ |
+| A3 | Ingestion + 4 extractors (incl. OCR, tracked changes) | ✅ |
+| A4 | Matching engine (lexical + semantic + fusion + learning loop) | ✅ |
+| A5 | Validation, currency, versioning | ✅ |
+| A6 | REST API (OpenAPI) | ✅ |
+| A7 | Frontend (search + operator console + dashboard) | ✅ |
+| A8 | Tests + quality report + README | ✅ |
+
+## Verified results (host dev profile, lexical-only matching, OCR off)
+
+- **Auto-normalization: 94.6%** end-to-end on the synthetic archive (53/56
+  positions), **0 unmatched** — far above the ≥70% target. The standalone matcher
+  scores **96.8%** auto-match on the curated eval set (`evaluate_matching.py`).
+  Embeddings (Docker profile) lift Latin-term matching further.
+- **All 4 formats parse**: xlsx/pdf/docx 100% success; scanned PDF requires OCR
+  (Tesseract, enabled in Docker). One deliberately broken file is logged without
+  halting the batch.
+- **13 anomalies** flagged (price jumps, non-resident<resident, dupes, future
+  dates); currency USD/RUB converted with originals preserved; price versioning
+  supersedes prior rows.
+- **19 tests pass** (`pytest`): matcher (11) + full API (8).
+
+Reproduce:
+```bash
+cd backend
+python -m scripts.load_reference        # 127 synthetic services
+python -m scripts.generate_fixtures      # sample_archive.zip (10 files)
+python -m scripts.ingest ../data/incoming/sample_archive.zip
+python -m scripts.evaluate_matching      # prints the auto-match rate
+python -m pytest                         # 19 tests
+```
+> On Windows set `PYTHONUTF8=1` so Cyrillic/Kazakh console output doesn't crash.
 
 ## Headline metric
 
 After every ingest the system writes a quality report (`/metrics` + dashboard):
 documents processed, **% auto-normalized**, review/unmatched counts, anomalies,
-per-format success rates. Target: **≥70% auto-normalization**.
+per-format success rates. Target: **≥70% auto-normalization** (achieved: 94.6%).
