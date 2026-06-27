@@ -59,6 +59,40 @@ def unmatched(
     return out
 
 
+@router.post("/admin/batch-confirm")
+def batch_confirm(
+    db: Session = Depends(get_db),
+    threshold: float = Query(0.85, ge=0.0, le=1.0),
+) -> dict:
+    """Bulk-accept every open review whose top candidate scores >= threshold
+    (brief §B5). Confirms the mapping + learns each synonym. Returns the count."""
+    open_reviews = db.scalars(
+        select(MatchReviewItem).where(MatchReviewItem.status == ReviewStatus.open)
+    ).all()
+    confirmed = 0
+    learned = 0
+    for rev in open_reviews:
+        cands = rev.candidates or []
+        if not cands or cands[0].get("score", 0) < threshold:
+            continue
+        item = db.get(PriceItem, rev.item_id)
+        if item is None:
+            continue
+        service = db.get(Service, cands[0]["service_id"])
+        if service is None:
+            continue
+        if learn_synonym(db, service, item.service_name_raw):
+            learned += 1
+        item.service_id = service.service_id
+        item.match_method = MatchMethod.manual
+        item.match_confidence = cands[0].get("score")
+        item.is_verified = True
+        rev.status = ReviewStatus.confirmed
+        confirmed += 1
+    db.commit()
+    return {"confirmed": confirmed, "synonyms_learned": learned, "threshold": threshold}
+
+
 @router.post("/match", response_model=MatchResponse)
 def manual_match(req: MatchRequest, db: Session = Depends(get_db)):
     item = db.get(PriceItem, req.item_id)

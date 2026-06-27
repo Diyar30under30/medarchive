@@ -163,6 +163,11 @@ export const api = {
   partnerServices: (id: string) => apiGet<PriceItem[]>(`/partners/${id}/services`),
   search: (q: string) => apiGet<SearchResult>(`/search?q=${encodeURIComponent(q)}`),
   unmatched: (status = "open") => apiGet<ReviewItem[]>(`/unmatched?status=${status}`),
+  batchConfirm: (threshold = 0.85) =>
+    req<{ confirmed: number; synonyms_learned: number }>(
+      `/admin/batch-confirm?threshold=${threshold}`,
+      { method: "POST" }
+    ),
   match: (body: {
     item_id: string;
     service_id?: string;

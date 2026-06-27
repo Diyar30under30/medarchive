@@ -65,6 +65,21 @@ export default function Queue() {
         <h1 className="text-xl font-bold text-foreground">Очередь проверки</h1>
         <div className="flex items-center gap-2">
           <Badge tone={items.length ? "primary" : "success"}>{items.length} в очереди</Badge>
+          <Button
+            variant="success"
+            disabled={busy || items.length === 0}
+            title="Принять все позиции с уверенностью ≥ 85%"
+            onClick={async () => {
+              setBusy(true);
+              try {
+                const r = await api.batchConfirm(0.85);
+                flash(`✓ принято ${r.confirmed}` + (r.synonyms_learned ? ` · выучено ${r.synonyms_learned} синонимов` : ""));
+                load();
+              } catch { flash("Ошибка"); } finally { setBusy(false); }
+            }}
+          >
+            принять все ≥85%
+          </Button>
           <Button variant="outline" onClick={load}>обновить</Button>
         </div>
       </div>

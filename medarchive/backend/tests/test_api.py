@@ -108,6 +108,16 @@ def test_service_partners_and_history(client):
     assert h.status_code == 200
 
 
+def test_batch_confirm_high_confidence(client):
+    before = len(client.get("/unmatched?status=open").json())
+    r = client.post("/admin/batch-confirm?threshold=0.85")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["confirmed"] >= 0
+    after = len(client.get("/unmatched?status=open").json())
+    assert after == before - body["confirmed"]
+
+
 def test_anomalies_listed(client):
     r = client.get("/anomalies")
     assert r.status_code == 200
