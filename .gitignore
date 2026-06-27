@@ -38,3 +38,6 @@ _diag.py
 # generated runtime artifacts
 medarchive/data/quality_report.json
 medarchive/data/incoming/fixtures_manifest.json
+
+# TS build info
+medarchive/frontend/tsconfig.tsbuildinfo
