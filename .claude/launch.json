@@ -2,10 +2,10 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "pulsevote",
+      "name": "medarchive-frontend",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev"],
-      "port": 3000,
+      "runtimeArgs": ["--prefix", "medarchive/frontend", "run", "dev"],
+      "port": 5173,
       "autoPort": true
     }
   ]
