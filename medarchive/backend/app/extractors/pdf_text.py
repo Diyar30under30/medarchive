@@ -33,9 +33,16 @@ def _num(s: str | None):
         return None
 
 
+# Clinic-metadata / label lines that must not be parsed as price rows.
+_LABEL_RE = re.compile(
+    r"^\s*(клиника|город|адрес|тел(?:ефон)?|phone|бин|қала|мекенжай|прайс|услуга\s*/)\b",
+    re.IGNORECASE,
+)
+
+
 def parse_price_line(line: str) -> ExtractedRow | None:
     line = line.strip()
-    if not line or looks_like_header([line]):
+    if not line or looks_like_header([line]) or _LABEL_RE.match(line):
         return None
     m = _LINE_RE.match(line)
     if not m:

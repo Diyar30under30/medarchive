@@ -55,14 +55,10 @@ class DocxTrackedExtractor:
         text_lines: list[str] = []
         notes: list[str] = []
 
-        # Title/paragraph context (first non-empty paragraph) as a weak hint.
-        title = ""
+        # Preserve all paragraphs (title + clinic metadata) in raw text.
         for p in document.paragraphs:
             if p.text.strip():
-                title = p.text.strip()
-                break
-        if title:
-            text_lines.append(f"# {title}")
+                text_lines.append(p.text.strip())
 
         for ti, table in enumerate(document.tables):
             grid = [[cell_final_text(c) for c in row.cells] for row in table.rows]

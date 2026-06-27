@@ -41,7 +41,49 @@ def _rows_for_clinic(seed: int, n: int) -> list[dict]:
     return rows
 
 
+_FONT_CANDIDATES = [
+    "C:/Windows/Fonts/arial.ttf",
+    "C:/Windows/Fonts/segoeui.ttf",
+    "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+    "/usr/share/fonts/truetype/freefont/FreeSans.ttf",
+    "/usr/share/fonts/truetype/noto/NotoSans-Regular.ttf",
+]
+
+
+def _cyrillic_fontfile() -> str | None:
+    """A TTF with Cyrillic glyphs; PyMuPDF's base fonts are Latin-only, so
+    inserting Cyrillic without this produces unreadable (unextractable) text."""
+    from os.path import exists
+
+    for p in _FONT_CANDIDATES:
+        if exists(p):
+            return p
+    return None
+
+
+_FONT = _cyrillic_fontfile()
+
+
+def _put(page, point, text, fontsize):
+    if _FONT:
+        page.insert_text(point, text, fontsize=fontsize, fontname="cyr", fontfile=_FONT)
+    else:
+        page.insert_text(point, text, fontsize=fontsize)
+
+
 # ── format writers ────────────────────────────────────────────────────────────
+def _meta_lines(clinic: dict) -> list[str]:
+    lines = [
+        f"Клиника: {clinic['name']}",
+        f"Город: {clinic['city']}",
+        f"Адрес: {clinic['address']}",
+        f"Тел: {clinic['phone']}",
+    ]
+    if clinic.get("bin"):
+        lines.append(f"БИН: {clinic['bin']}")
+    return lines
+
+
 def write_xlsx(clinic: dict, rows: list[dict], *, header_offset: int = 0,
                multi_sheet: bool = False) -> bytes:
     from openpyxl import Workbook
@@ -49,9 +91,11 @@ def write_xlsx(clinic: dict, rows: list[dict], *, header_offset: int = 0,
     wb = Workbook()
     ws = wb.active
     ws.title = "Прайс"
-    # Optional preamble rows so the header is NOT row 1 (brief: detect header).
+    # Clinic metadata preamble — also pushes the header off row 1 (brief: detect).
+    for line in _meta_lines(clinic):
+        ws.append([line])
     for _ in range(header_offset):
-        ws.append([clinic["name"]])
+        ws.append([""])
     ws.append(["Наименование услуги", "Цена резидент", "Цена нерезидент"])
     for r in rows:
         ws.append([r["raw"], r["resident"], r["nonresident"]])
@@ -71,13 +115,17 @@ def write_pdf_text(clinic: dict, rows: list[dict]) -> bytes:
 
     doc = fitz.open()
     page = doc.new_page()
-    y = 60
-    page.insert_text((50, y), f"{clinic['name']} — прайс-лист", fontsize=14)
-    y += 20
-    page.insert_text((50, y), "Услуга / Резидент / Нерезидент", fontsize=10)
+    y = 50
+    _put(page, (50, y), f"{clinic['name']} — прайс-лист", 14)
+    y += 18
+    for line in _meta_lines(clinic):
+        _put(page, (50, y), line, 9)
+        y += 13
+    y += 6
+    _put(page, (50, y), "Услуга / Резидент / Нерезидент", 10)
     y += 20
     for r in rows:
-        page.insert_text((50, y), f"{r['raw']}    {r['resident']}    {r['nonresident']}", fontsize=10)
+        _put(page, (50, y), f"{r['raw']}    {r['resident']}    {r['nonresident']}", 10)
         y += 16
         if y > 760:
             page = doc.new_page()
@@ -94,11 +142,15 @@ def write_pdf_scan(clinic: dict, rows: list[dict]) -> bytes:
     # First render a text page, rasterize it, then place the image on a blank PDF.
     tmp = fitz.open()
     p = tmp.new_page()
-    y = 60
-    p.insert_text((50, y), f"{clinic['name']} (скан)", fontsize=16)
-    y += 28
+    y = 50
+    _put(p, (50, y), f"{clinic['name']} (скан)", 16)
+    y += 24
+    for line in _meta_lines(clinic):
+        _put(p, (50, y), line, 11)
+        y += 18
+    y += 6
     for r in rows:
-        p.insert_text((50, y), f"{r['raw']}   {r['resident']}   {r['nonresident']}", fontsize=13)
+        _put(p, (50, y), f"{r['raw']}   {r['resident']}   {r['nonresident']}", 13)
         y += 22
     pix = p.get_pixmap(dpi=150)
     img_bytes = pix.tobytes("png")
@@ -121,6 +173,8 @@ def write_docx_tracked(clinic: dict, rows: list[dict]) -> bytes:
 
     document = Document()
     document.add_heading(clinic["name"], level=1)
+    for line in _meta_lines(clinic):
+        document.add_paragraph(line)
     table = document.add_table(rows=1, cols=3)
     hdr = table.rows[0].cells
     hdr[0].text = "Услуга"

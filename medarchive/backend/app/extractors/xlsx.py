@@ -29,6 +29,10 @@ class XlsxExtractor:
             if not sheet_rows:
                 continue
             text_lines.append(f"# sheet: {ws.title}")
+            # Preserve EVERY row in raw text (audit + partner-metadata parsing).
+            for raw in sheet_rows:
+                if raw and not all(c is None for c in raw):
+                    text_lines.append(" | ".join("" if c is None else str(c) for c in raw))
 
             header_idx = self._find_header(sheet_rows)
             if header_idx is None:
@@ -45,7 +49,6 @@ class XlsxExtractor:
                 if raw is None or all(c is None for c in raw):
                     continue
                 line = " | ".join("" if c is None else str(c) for c in raw)
-                text_lines.append(line)
                 name = self._cell(raw, cols["name"])
                 if not name or self._is_total(name):
                     continue
