@@ -22,6 +22,12 @@ _HOMOGLYPHS = str.maketrans(
 _PUNCT_RE = re.compile(r"[^\w\s]", flags=re.UNICODE)
 _WS_RE = re.compile(r"\s+")
 _NUM_NOISE_RE = re.compile(r"№\s*\d+")
+# Spaced single-letter acronyms: "о а к" → "оак" so dotted forms (О.А.К.) expand.
+_ACRONYM_RE = re.compile(r"\b(?:[^\W\d_]\s){1,}[^\W\d_]\b", flags=re.UNICODE)
+
+
+def _collapse_acronyms(text: str) -> str:
+    return _ACRONYM_RE.sub(lambda m: m.group(0).replace(" ", ""), text)
 
 
 def _expand_abbreviations(text: str) -> str:
@@ -53,6 +59,7 @@ def canonicalize(raw: str, *, expand: bool = True, drop_noise: bool = True) -> s
     # ("кл. ан. крови", "б/х") collapse onto their map keys.
     text = _PUNCT_RE.sub(" ", text)
     text = _WS_RE.sub(" ", text).strip()
+    text = _collapse_acronyms(text)
     # Expand abbreviations BEFORE homoglyph unification, otherwise Latin
     # abbreviations (cbc, tsh, pcr) get transliterated to Cyrillic first and
     # never match their keys.
