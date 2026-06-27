@@ -8,6 +8,11 @@ from fastapi import FastAPI
 
 
 def register_routers(app: FastAPI) -> None:
-    # from app.api import services, partners, search, admin, ...
-    # app.include_router(services.router)
-    return
+    from app.api import admin, metrics, partners, review, search, services
+
+    app.include_router(services.router)
+    app.include_router(partners.router)
+    app.include_router(search.router)
+    app.include_router(review.router)
+    app.include_router(admin.router)
+    app.include_router(metrics.router)

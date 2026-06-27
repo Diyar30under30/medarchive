@@ -37,6 +37,50 @@ def init_db() -> None:
     log.info("Database tables ensured (%s).", "postgres" if settings.is_postgres else "sqlite")
 
 
+def startup_data() -> None:
+    """Best-effort: load the directory and optionally seed fixtures on boot.
+    Never crashes the server — the API must always come up so /docs is reachable."""
+    from app.db.session import SessionLocal
+
+    if settings.auto_load_reference:
+        try:
+            from app.normalization.reference_loader import find_reference_file, load_reference
+
+            path = find_reference_file()
+            if path is None:
+                from scripts.generate_reference import main as gen
+                path = gen()
+            with SessionLocal() as db:
+                result = load_reference(db, path)
+            log.info("Reference loaded: %s", result)
+        except Exception:  # noqa: BLE001
+            log.exception("Reference load skipped (continuing).")
+
+    if settings.auto_seed_fixtures:
+        try:
+            from pathlib import Path
+
+            from scripts.generate_fixtures import main as gen_fix
+            from app.workers.jobs import create_job, run_job
+
+            zip_path = settings.incoming_path / "sample_archive.zip"
+            if not zip_path.exists():
+                gen_fix()
+            with SessionLocal() as db:
+                from sqlalchemy import func, select
+                from app.models.price_item import PriceItem
+
+                already = db.scalar(select(func.count()).select_from(PriceItem)) or 0
+            if already == 0:
+                with SessionLocal() as db:
+                    job = create_job(db, zip_path.name)
+                    job_id = job.job_id
+                run_job(job_id, str(zip_path))
+                log.info("Seeded fixtures from %s", zip_path)
+        except Exception:  # noqa: BLE001
+            log.exception("Fixture seed skipped (continuing).")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     log.info(
@@ -47,7 +91,7 @@ async def lifespan(app: FastAPI):
         settings.enable_ocr,
     )
     init_db()
-    # Reference load / fixture seed are wired in later phases (A1/A2).
+    startup_data()
     yield
     log.info("Shutting down MedArchive.")
 
