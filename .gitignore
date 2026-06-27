@@ -41,3 +41,6 @@ medarchive/data/incoming/fixtures_manifest.json
 
 # TS build info
 medarchive/frontend/tsconfig.tsbuildinfo
+
+# Next.js build artifacts (leftover from prior app)
+.next/
