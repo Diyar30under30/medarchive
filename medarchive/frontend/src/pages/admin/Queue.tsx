@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from "react";
-import { api, kzt, type ReviewItem } from "../../lib/api";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { api, kzt, type ReviewItem, type Service } from "../../lib/api";
 import { Card, Badge, Button, Spinner, Empty, Icon } from "../../components/ui";
 
 export default function Queue() {
@@ -7,6 +7,13 @@ export default function Queue() {
   const [idx, setIdx] = useState(0);
   const [busy, setBusy] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  // "Correct": search the whole directory or create a new service (ТЗ §4.3).
+  const [correcting, setCorrecting] = useState(false);
+  const [dirQ, setDirQ] = useState("");
+  const [dirResults, setDirResults] = useState<Service[]>([]);
+  const [newName, setNewName] = useState("");
+  const [newCat, setNewCat] = useState("");
+  const dirTimer = useRef<number>();
 
   const load = useCallback(() => {
     api.unmatched("open").then((q) => { setItems(q); setIdx(0); }).catch(() => setItems([]));
@@ -43,10 +50,42 @@ export default function Queue() {
     catch { flash("Ошибка"); } finally { setBusy(false); }
   }, [current, busy, advance]);
 
+  const createNew = useCallback(async () => {
+    if (!current || busy || !newName.trim()) return;
+    setBusy(true);
+    try {
+      const r = await api.match({
+        item_id: current.item_id,
+        new_service_name: newName.trim(),
+        new_service_category: newCat.trim() || undefined,
+      });
+      flash(`✓ создана услуга «${newName.trim()}»` + (r.learned_synonym ? ` · синоним «${r.learned_synonym}»` : ""));
+      advance();
+    } catch { flash("Ошибка создания"); } finally { setBusy(false); }
+  }, [current, busy, newName, newCat, advance]);
+
+  // Reset the correct panel whenever the focused item changes.
+  useEffect(() => {
+    setCorrecting(false); setDirQ(""); setDirResults([]); setNewName(""); setNewCat("");
+  }, [current?.item_id]);
+
+  // Debounced directory search for the "Correct" flow.
+  useEffect(() => {
+    if (!dirQ.trim()) { setDirResults([]); return; }
+    window.clearTimeout(dirTimer.current);
+    dirTimer.current = window.setTimeout(() => {
+      api.services(dirQ, undefined, 8).then((l) => setDirResults(l.items)).catch(() => setDirResults([]));
+    }, 200);
+    return () => window.clearTimeout(dirTimer.current);
+  }, [dirQ]);
+
   // Keyboard-first: C/Enter confirm top, R reject, J/K navigate, 1–5 pick candidate.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (!current) return;
+      // Don't hijack keys while typing in the correct/search fields.
+      const t = e.target as HTMLElement | null;
+      if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA")) return;
       if (e.key === "c" || e.key === "Enter") { if (current.candidates[0]) confirm(current.candidates[0].service_id); }
       else if (e.key === "r") reject();
       else if (e.key === "j") setIdx((i) => Math.min((items?.length ?? 1) - 1, i + 1));
@@ -160,10 +199,55 @@ export default function Queue() {
                 </div>
               </div>
 
+              {/* Correct: pick any service from the directory or create a new one (ТЗ §4.3). */}
+              <div className="mt-4 pt-4 border-t border-slate-100">
+                {!correcting ? (
+                  <Button variant="outline" onClick={() => setCorrecting(true)} disabled={busy}>
+                    исправить — выбрать из справочника / создать новую
+                  </Button>
+                ) : (
+                  <div className="space-y-3">
+                    <div>
+                      <div className="text-xs uppercase tracking-wide text-muted-fg mb-1">Поиск по справочнику</div>
+                      <input
+                        autoFocus value={dirQ} onChange={(e) => setDirQ(e.target.value)}
+                        placeholder="название услуги…"
+                        className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-ring/40"
+                      />
+                      {dirResults.length > 0 && (
+                        <div className="mt-2 space-y-1 max-h-48 overflow-auto">
+                          {dirResults.map((s) => (
+                            <div key={s.service_id}
+                              className="flex items-center justify-between gap-2 border border-slate-200 rounded-lg px-3 py-2">
+                              <div className="min-w-0">
+                                <div className="text-sm font-medium text-slate-900 truncate">{s.service_name}</div>
+                                <div className="text-xs text-muted-fg">{s.category}</div>
+                              </div>
+                              <Button variant="success" onClick={() => confirm(s.service_id)} disabled={busy}>выбрать</Button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    <div className="border-t border-slate-100 pt-3">
+                      <div className="text-xs uppercase tracking-wide text-muted-fg mb-1">Создать новую услугу</div>
+                      <div className="flex flex-col sm:flex-row gap-2">
+                        <input value={newName} onChange={(e) => setNewName(e.target.value)}
+                          placeholder="название" className="flex-1 px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-ring/40" />
+                        <input value={newCat} onChange={(e) => setNewCat(e.target.value)}
+                          placeholder="категория" className="sm:w-48 px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-ring/40" />
+                        <Button onClick={createNew} disabled={busy || !newName.trim()}>создать и сопоставить</Button>
+                      </div>
+                    </div>
+                    <button onClick={() => setCorrecting(false)} className="text-xs text-muted-fg hover:text-slate-700">отмена</button>
+                  </div>
+                )}
+              </div>
+
               <div className="mt-5 flex items-center gap-2">
                 <Button variant="danger" onClick={reject} disabled={busy}>{Icon.x()} отклонить (R)</Button>
                 <div className="ml-auto text-xs text-muted-fg">
-                  C/Enter — принять лучший · R — отклонить · J/K — навигация
+                  C/Enter — принять · R — отклонить · J/K — навигация
                 </div>
               </div>
             </Card>

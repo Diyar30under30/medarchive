@@ -53,9 +53,14 @@ architecture and the two-profile decision.
 
 ## Swapping in the real organizers' data
 
-- **Reference directory:** drop `Справочник услуг.xlsx` (or a JSON with the same
-  `ID | Специальность | Code | Name_ru | TarificatrCode` mapping) into `data/reference/`,
-  then re-run `python -m scripts.load_reference` (idempotent).
+- **Reference directory:** drop the organizers' directory (XLSX **or** JSON) into
+  `data/reference/`, then re-run `python -m scripts.load_reference` (idempotent).
+  The loader is **schema-flexible** — it auto-detects columns by name and handles
+  both the spec layout (`service_id, service_name, synonyms, category, icd_code`)
+  and the real-file layout (`ID, Специальность, Code, Name_ru, TarificatrCode`).
+  A provided `service_id` is used as-is (else a deterministic UUID5 is generated);
+  provided `synonyms`/`icd_code` are loaded, and provided synonyms are **merged**
+  with operator-learned ones on re-load so the learning loop is never lost.
 - **Price-list archive:** drop the ZIP into `data/incoming/` and either
   `POST /admin/ingest` or `python -m scripts.ingest data/incoming/<archive>.zip`.
 
