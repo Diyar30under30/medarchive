@@ -34,3 +34,7 @@ get-pip.py
 
 # throwaway diagnostics
 _diag.py
+
+# generated runtime artifacts
+medarchive/data/quality_report.json
+medarchive/data/incoming/fixtures_manifest.json
