@@ -6,6 +6,7 @@ import PartnerPage from "./pages/Partner";
 import Dashboard from "./pages/admin/Dashboard";
 import Queue from "./pages/admin/Queue";
 import Upload from "./pages/admin/Upload";
+import Anomalies from "./pages/admin/Anomalies";
 
 export default function App() {
   return (
@@ -17,6 +18,7 @@ export default function App() {
           <Route path="/partner/:id" element={<PartnerPage />} />
           <Route path="/admin" element={<Dashboard />} />
           <Route path="/admin/queue" element={<Queue />} />
+          <Route path="/admin/anomalies" element={<Anomalies />} />
           <Route path="/admin/upload" element={<Upload />} />
         </Routes>
       </Layout>

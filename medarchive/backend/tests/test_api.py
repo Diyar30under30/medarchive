@@ -106,3 +106,21 @@ def test_service_partners_and_history(client):
     assert r.status_code == 200
     h = client.get(f"/services/{svc['service_id']}/price-history")
     assert h.status_code == 200
+
+
+def test_anomalies_listed(client):
+    r = client.get("/anomalies")
+    assert r.status_code == 200
+    rows = r.json()
+    assert isinstance(rows, list) and len(rows) > 0
+    assert {"kind", "note", "partner_name"} <= set(rows[0])
+
+
+def test_export_csv_and_xlsx(client):
+    csv = client.get("/export.csv")
+    assert csv.status_code == 200
+    assert csv.headers["content-type"].startswith("text/csv")
+    assert "partner" in csv.text.splitlines()[0]
+    xlsx = client.get("/export.xlsx")
+    assert xlsx.status_code == 200
+    assert len(xlsx.content) > 0

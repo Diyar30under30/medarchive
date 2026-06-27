@@ -56,6 +56,10 @@ def compute_metrics(db: Session) -> dict:
     ) or 0
 
     services = db.scalar(select(func.count()).select_from(Service)) or 0
+    # Synonyms learned from operator confirmations (the learning loop, brief §8.8).
+    synonyms_learned = sum(
+        len(s or []) for s in db.scalars(select(Service.synonyms)).all()
+    )
 
     # Per-format success rate.
     per_format: dict = {}
@@ -75,6 +79,7 @@ def compute_metrics(db: Session) -> dict:
 
     return {
         "services_in_directory": services,
+        "synonyms_learned": synonyms_learned,
         "documents_total": total_docs,
         "documents_by_status": docs_by_status,
         "documents_errored": docs_by_status.get("error", 0),

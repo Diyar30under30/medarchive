@@ -4,7 +4,7 @@ import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, CartesianGrid,
 } from "recharts";
 import { api, type Metrics } from "../../lib/api";
-import { Card, StatCard, Spinner, Badge } from "../../components/ui";
+import { Card, StatCard, Spinner, Badge, Button } from "../../components/ui";
 
 const METHOD_COLORS: Record<string, string> = {
   exact: "#1e40af", synonym: "#2563eb", lexical: "#3b82f6", semantic: "#0ea5e9",
@@ -32,9 +32,17 @@ export default function Dashboard() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-4">
+      <div className="flex items-center justify-between mb-4 gap-2 flex-wrap">
         <h1 className="text-xl font-bold text-foreground">Панель оператора</h1>
-        <Badge tone="muted">обновлено {new Date(m.generated_at).toLocaleTimeString("ru-RU")}</Badge>
+        <div className="flex items-center gap-2">
+          <a href={api.exportCsvUrl()} download>
+            <Button variant="outline">экспорт CSV</Button>
+          </a>
+          <a href={api.exportXlsxUrl()} download>
+            <Button variant="outline">экспорт XLSX</Button>
+          </a>
+          <Badge tone="muted">обновлено {new Date(m.generated_at).toLocaleTimeString("ru-RU")}</Badge>
+        </div>
       </div>
 
       {/* Headline metric */}
@@ -58,11 +66,13 @@ export default function Dashboard() {
           tone={m.anomalies_flagged > 0 ? "danger" : "default"} sub="цены/даты/дубли" />
       </div>
 
-      <div className="grid lg:grid-cols-3 gap-3">
+      <div className="grid lg:grid-cols-4 gap-3">
         <StatCard label="Услуг в справочнике" value={m.services_in_directory} />
         <StatCard label="Позиций всего" value={m.positions_total}
           sub={`${m.unmatched} без сопоставления`} />
         <StatCard label="Сопоставлено" value={m.matched_any} tone="success" />
+        <StatCard label="Синонимов выучено" value={m.synonyms_learned} tone="primary"
+          sub="из подтверждений оператора" />
       </div>
 
       <div className="grid lg:grid-cols-2 gap-3 mt-3">

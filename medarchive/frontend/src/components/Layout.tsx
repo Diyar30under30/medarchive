@@ -32,6 +32,7 @@ export default function Layout({ children }: { children: ReactNode }) {
             <span className="mx-1 text-slate-300">|</span>
             <Tab to="/admin">Дашборд</Tab>
             <Tab to="/admin/queue">Очередь</Tab>
+            <Tab to="/admin/anomalies">Аномалии</Tab>
             <Tab to="/admin/upload">Загрузка</Tab>
           </nav>
           <div className="ml-auto text-xs text-muted-fg hidden sm:block">

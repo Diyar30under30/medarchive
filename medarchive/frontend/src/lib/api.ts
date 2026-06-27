@@ -98,8 +98,23 @@ export interface Job {
   finished_at?: string | null;
 }
 
+export interface Anomaly {
+  item_id: string;
+  kind: string;
+  note: string;
+  service_name_raw: string;
+  service_name?: string | null;
+  service_id?: string | null;
+  partner_name: string;
+  city?: string | null;
+  price_resident_kzt?: number | null;
+  price_nonresident_kzt?: number | null;
+  effective_date?: string | null;
+}
+
 export interface Metrics {
   services_in_directory: number;
+  synonyms_learned: number;
   documents_total: number;
   documents_by_status: Record<string, number>;
   documents_errored: number;
@@ -169,6 +184,9 @@ export const api = {
   job: (id: string) => apiGet<Job>(`/admin/jobs/${id}`),
   jobs: () => apiGet<Job[]>(`/admin/jobs`),
   metrics: () => apiGet<Metrics>(`/metrics`),
+  anomalies: () => apiGet<Anomaly[]>(`/anomalies`),
+  exportCsvUrl: () => `${API_BASE}/export.csv`,
+  exportXlsxUrl: () => `${API_BASE}/export.xlsx`,
 };
 
 export const kzt = (v?: number | null) =>

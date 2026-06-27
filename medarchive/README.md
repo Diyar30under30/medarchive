@@ -104,6 +104,20 @@ python -m pytest                         # 19 tests
 ```
 > On Windows set `PYTHONUTF8=1` so Cyrillic/Kazakh console output doesn't crash.
 
+## Part B (additions, after Part A green)
+
+| # | Feature | Status |
+|---|---|---|
+| 1 | Synonym-learning visibility (synonyms-learned count on dashboard) | ✅ |
+| 2 | "Explain match" (lexical/semantic scores per candidate in the queue) | ✅ |
+| 3 | Price-history charts per service (Recharts, from versioned data) | ✅ |
+| 4 | Anomaly dashboard (`GET /anomalies` + `/admin/anomalies` page) | ✅ |
+| 6 | Export normalized DB (`GET /export.csv`, `/export.xlsx`) | ✅ |
+| — | Alembic baseline migration (dialect-correct, pgvector) | ✅ |
+
+Remaining Part B (not built): bulk/batch verification, partner map (Leaflet),
+БИН duplicate-merge tool, MeiliSearch/Celery, RU/KK UI toggle, ICD enrichment.
+
 ## Headline metric
 
 After every ingest the system writes a quality report (`/metrics` + dashboard):

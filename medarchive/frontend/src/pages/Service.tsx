@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { api, kzt, type PartnerPrice, type Service } from "../lib/api";
 import { Card, Badge, Spinner, Empty, Icon } from "../components/ui";
+import PriceHistoryChart from "../components/PriceHistoryChart";
 
 export default function ServicePage() {
   const { id = "" } = useParams();
@@ -80,6 +81,8 @@ export default function ServicePage() {
           </Link>
         ))}
       </div>
+
+      <PriceHistoryChart serviceId={id} />
     </div>
   );
 }
