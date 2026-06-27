@@ -63,8 +63,10 @@ class ServiceIndex:
     """Searchable view of the directory. Build once, query many."""
 
     services: list[IndexedService] = field(default_factory=list)
-    _canon_to_idx: dict[str, int] = field(default_factory=dict)
-    _syn_to_idx: dict[str, int] = field(default_factory=dict)
+    # canonical → ALL service indices with that name (Name_ru repeats across
+    # specialties, so this is intentionally one-to-many).
+    _canon_to_idx: dict[str, list[int]] = field(default_factory=dict)
+    _syn_to_idx: dict[str, list[int]] = field(default_factory=dict)
 
     @classmethod
     def from_rows(cls, rows: list[dict]) -> "ServiceIndex":
@@ -83,15 +85,16 @@ class ServiceIndex:
             )
             i = len(idx.services)
             idx.services.append(svc)
-            idx._canon_to_idx.setdefault(canon, i)
+            idx._canon_to_idx.setdefault(canon, []).append(i)
             for s in syns:
-                idx._syn_to_idx.setdefault(s, i)
+                idx._syn_to_idx.setdefault(s, []).append(i)
         return idx
 
     def __len__(self) -> int:
         return len(self.services)
 
-    def exact_or_synonym(self, canon: str) -> tuple[int, str] | None:
+    def exact_or_synonym(self, canon: str) -> tuple[list[int], str] | None:
+        """Return (all matching indices, method) or None."""
         if canon in self._canon_to_idx:
             return self._canon_to_idx[canon], "exact"
         if canon in self._syn_to_idx:
@@ -154,22 +157,44 @@ class Matcher:
         if not canon:
             return []
 
-        # 1. exact / synonym short-circuit.
+        # 1. exact / synonym short-circuit. Name_ru repeats across specialties,
+        #    so an exact name can hit several services — never silently pick one
+        #    (brief guardrail): disambiguate by specialty_hint, else return all
+        #    as review candidates.
         hit = self.index.exact_or_synonym(canon)
         if hit is not None:
-            i, method = hit
-            svc = self.index.services[i]
-            return [
-                Candidate(
+            idxs, method = hit
+
+            def _exact_candidate(i: int, score: float) -> Candidate:
+                svc = self.index.services[i]
+                return Candidate(
                     service_id=svc.service_id,
                     service_name=svc.service_name,
                     category=svc.category,
-                    score=1.0,
+                    score=score,
                     method=method,
                     lexical=1.0,
                     semantic=1.0 if self.provider.available else 0.0,
                 )
-            ]
+
+            if len(idxs) == 1:
+                return [_exact_candidate(idxs[0], 1.0)]
+
+            if specialty_hint and specialty_hint.strip():
+                ch = canonicalize(specialty_hint)
+                filtered = [
+                    i for i in idxs
+                    if ch and ch in canonicalize(self.index.services[i].category)
+                ]
+                if len(filtered) == 1:
+                    return [_exact_candidate(filtered[0], 1.0)]
+                if filtered:
+                    idxs = filtered
+
+            # Still ambiguous → all candidates just below the auto threshold so
+            # the operator disambiguates (review), with the matches ranked.
+            ambiguous_score = min(0.84, self.auto_threshold - 0.01)
+            return [_exact_candidate(i, ambiguous_score) for i in idxs]
 
         # 2. lexical candidate pool (wider than top_k so semantic can re-rank).
         pool = max(top_k * 4, 20)

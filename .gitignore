@@ -31,3 +31,6 @@ Thumbs.db
 
 # transient pip bootstrap
 get-pip.py
+
+# throwaway diagnostics
+_diag.py

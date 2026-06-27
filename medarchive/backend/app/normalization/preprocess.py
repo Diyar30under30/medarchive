@@ -49,10 +49,16 @@ def canonicalize(raw: str, *, expand: bool = True, drop_noise: bool = True) -> s
         return ""
     text = unicodedata.normalize("NFKC", str(raw)).lower().strip()
     text = _NUM_NOISE_RE.sub(" ", text)
-    text = text.translate(_HOMOGLYPHS)
+    # Strip punctuation BEFORE expanding so dotted/slashed abbreviations
+    # ("кл. ан. крови", "б/х") collapse onto their map keys.
+    text = _PUNCT_RE.sub(" ", text)
+    text = _WS_RE.sub(" ", text).strip()
+    # Expand abbreviations BEFORE homoglyph unification, otherwise Latin
+    # abbreviations (cbc, tsh, pcr) get transliterated to Cyrillic first and
+    # never match their keys.
     if expand:
         text = _expand_abbreviations(text)
-    text = _PUNCT_RE.sub(" ", text)
+    text = text.translate(_HOMOGLYPHS)
     text = _WS_RE.sub(" ", text).strip()
     if drop_noise:
         text, _ = strip_noise(text)
